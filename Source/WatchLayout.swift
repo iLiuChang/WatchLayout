@@ -22,25 +22,11 @@
 
 import UIKit
 
-final public class WatchLayout: UICollectionViewLayout {
+public struct WatchLayoutAttributes {
+    public var itemSize: CGFloat = 100
+    public var spacing: CGFloat = 0
     
-    public var itemSize: CGFloat = 100 {
-        didSet {
-            invalidateLayout()
-        }
-    }
-    
-    public var spacing: CGFloat = 0 {
-        didSet {
-            invalidateLayout()
-        }
-    }
-    
-    private var _minScale: CGFloat = 0.2 {
-        didSet {
-            invalidateLayout()
-        }
-    }
+    private var _minScale: CGFloat = 0.2
     
     public var minScale: CGFloat {
         get {
@@ -51,11 +37,7 @@ final public class WatchLayout: UICollectionViewLayout {
         }
     }
     
-    private var _nextItemScale: CGFloat = 0.4 {
-        didSet {
-            invalidateLayout()
-        }
-    }
+    private var _nextItemScale: CGFloat = 0.4
     
     public var nextItemScale: CGFloat {
         get {
@@ -63,6 +45,28 @@ final public class WatchLayout: UICollectionViewLayout {
         }
         set {
             _nextItemScale = min(max(newValue, 0), 1)
+        }
+    }
+    
+    public init(
+        itemSize: CGFloat = 100,
+        spacing: CGFloat = 0,
+        minScale: CGFloat = 0.2,
+        nextItemScale: CGFloat = 0.4
+    ) {
+        self.itemSize = itemSize
+        self.spacing = spacing
+        self.minScale = minScale
+        self.nextItemScale = nextItemScale
+    }
+    
+}
+
+final public class WatchLayout: UICollectionViewLayout {
+    
+    public var layoutAttributes = WatchLayoutAttributes() {
+        didSet {
+            invalidateLayout()
         }
     }
     
@@ -78,7 +82,7 @@ final public class WatchLayout: UICollectionViewLayout {
         )
     }
     
-    public var centeredIndexPath: IndexPath?
+    public private(set) var centeredIndexPath: IndexPath?
     
     private var attributes = [UICollectionViewLayoutAttributes]()
     private var layers = 1
@@ -88,7 +92,7 @@ final public class WatchLayout: UICollectionViewLayout {
             return .zero
         }
         
-        let size = CGFloat(layers) * (itemSize + spacing) * 2 - (itemSize + spacing)
+        let size = CGFloat(layers) * (layoutAttributes.itemSize + layoutAttributes.spacing) * 2 - (layoutAttributes.itemSize + layoutAttributes.spacing)
         let inset = collectionView.contentInset
         return CGSize(width: size + collectionView.bounds.width + inset.left + inset.right,
                       height: size + collectionView.bounds.height + inset.top + inset.bottom)
@@ -128,14 +132,14 @@ final public class WatchLayout: UICollectionViewLayout {
             
             if layer == 0 {
                 let attr = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: i, section: 0))
-                attr.size = CGSize(width: itemSize, height: itemSize)
+                attr.size = CGSize(width: layoutAttributes.itemSize, height: layoutAttributes.itemSize)
                 attr.center = center
                 attributes.append(attr)
                 
                 i += 1
             } else {
             
-                let radius = CGFloat(layer) * (itemSize + spacing)
+                let radius = CGFloat(layer) * (layoutAttributes.itemSize + layoutAttributes.spacing)
                 let hexagon = Multagon(6, center: center, radius: radius)
                 
                 for j in 0 ..< layer {
@@ -143,7 +147,7 @@ final public class WatchLayout: UICollectionViewLayout {
                     let vertexes = hexagon.midVertex(slice: layer, slideIndex: j)
                     for vertex in vertexes {
                         let attr = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: i, section: 0))
-                        attr.size = CGSize(width: itemSize, height: itemSize)
+                        attr.size = CGSize(width: layoutAttributes.itemSize, height: layoutAttributes.itemSize)
                         attr.center = vertex
                         
                         attributes.append(attr)
@@ -165,7 +169,7 @@ final public class WatchLayout: UICollectionViewLayout {
         layers = max(layer, 1)
         
         // move all to center
-        let size = CGFloat(layers) * (itemSize + spacing) * 2 - (itemSize + spacing)
+        let size = CGFloat(layers) * (layoutAttributes.itemSize + layoutAttributes.spacing) * 2 - (layoutAttributes.itemSize + layoutAttributes.spacing)
         let inset = collectionView.contentInset
         
         attributes.forEach { attr in
@@ -187,8 +191,8 @@ final public class WatchLayout: UICollectionViewLayout {
         result.forEach { attr in
             let distance = CGPoint.distance(center, attr.center)
 
-            var scale = 1 - (1 - nextItemScale) * distance / itemSize // 0.8 is scale at 1 itemsize distance
-            scale = min(max(scale, minScale), 1)
+            var scale = 1 - (1 - layoutAttributes.nextItemScale) * distance / layoutAttributes.itemSize // 0.8 is scale at 1 itemsize distance
+            scale = min(max(scale, layoutAttributes.minScale), 1)
             attr.transform = CGAffineTransform(scaleX: scale, y: scale)
         }
         return result
